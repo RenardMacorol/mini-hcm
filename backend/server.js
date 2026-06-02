@@ -152,11 +152,12 @@ app.use('/api/auth', authRouter);
 app.use('/api/attendance', verifyFirebaseToken, employeeAttendanceRouter);
 app.use('/api/admin/attendance', verifyFirebaseToken, adminAttendanceRouter);
 
-export default app;
 
 // Keep your local listening port inside a conditional block so it doesn't break locally
 if (process.env.NODE_ENV !== 'production') {
 	const PORT = process.env.PORT || 8080;
 	app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 }
+
+export { app };
 
