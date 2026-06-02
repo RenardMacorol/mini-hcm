@@ -1,5 +1,7 @@
 import express from 'express';
 import admin from 'firebase-admin';
+import attendanceRouter from './routes/attendance.js'
+import { verifyFirebaseToken } from './middleware/auth.js'
 
 const app = express();
 app.use(express.json()); // Essential to parse JSON request bodies from React
@@ -22,7 +24,7 @@ if (process.env.FIRESTORE_EMULATOR_HOST || process.env.FIREBASE_AUTH_EMULATOR_HO
 	});
 }
 
-const db = admin.firestore()
+export const db = admin.firestore()
 
 
 // Sanity Check Endpoint
@@ -133,6 +135,8 @@ app.post('/api/auth/verify-token', async (req, res) => {
 		});
 	}
 });
+
+app.use('/api/attendance', verifyFirebaseToken, attendanceRouter);
 
 app.listen(PORT, () => {
 	console.log(`[MiniHCM] Active on internal port ${PORT}`);
