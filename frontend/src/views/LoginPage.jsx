@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { THEME, commonStyles } from '../components/CommonStyles';
+import BACKEND_URL from '../backendConfig';
 
 const LoginPage = ({ setView, setUser }) => {
 	const [email, setEmail] = useState('');
