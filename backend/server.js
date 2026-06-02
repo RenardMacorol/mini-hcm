@@ -9,7 +9,9 @@ import authRouter from './routes/auth.js'
 const app = express();
 
 app.use(cors({
-	origin: ['https://mini-hcm-b2108.firebaseapp.com', 'http://localhost:5173'], // Explicitly allow your frontend server
+	origin: ['https://mini-hcm-b2108.firebaseapp.com',
+		'https://mini-hcm-alpha.vercel.app',
+		'http://localhost:5173'], // Explicitly allow your frontend server
 	methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
 	allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -169,5 +171,5 @@ if (process.env.NODE_ENV !== 'production') {
 	app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 }
 
-export { app };
+export default app;
 
