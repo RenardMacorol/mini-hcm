@@ -27,13 +27,23 @@ if (process.env.FIRESTORE_EMULATOR_HOST || process.env.FIREBASE_AUTH_EMULATOR_HO
 	// When using local emulators, we can pass a dummy project ID without a real credential file
 	admin.initializeApp({ projectId: "mini-hcm-b2108" });
 } else {
-	// Production Fallback using explicit environment variable
-	const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+	// Production Fallback matching your exact Vercel variable name
+	const envKey = process.env.GOOGLE_APPLICATION_CREDENTIALS;
 
-	admin.initializeApp({
-		credential: admin.credential.cert(serviceAccount)
-	});
-
+	if (!envKey) {
+		console.error("❌ CRITICAL ERROR: GOOGLE_APPLICATION_CREDENTIALS environment variable is missing from Vercel!");
+	} else {
+		try {
+			const serviceAccount = JSON.parse(envKey);
+			admin.initializeApp({
+				credential: admin.credential.cert(serviceAccount)
+			});
+			console.log("✅ Firebase Admin successfully initialized!");
+		} catch (parseError) {
+			console.error("❌ CRITICAL ERROR: Failed to parse GOOGLE_APPLICATION_CREDENTIALS. Ensure it is a valid JSON string.");
+			console.error(parseError);
+		}
+	}
 }
 
 export const db = admin.firestore()
