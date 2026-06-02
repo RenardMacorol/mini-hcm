@@ -1,10 +1,13 @@
 import express from 'express';
-import { db } from '../server.js'
+import { db } from '../server.js';
 import { calculateShiftMetrics } from '../utils/attendanceMathHandler.js';
 
 const router = express.Router();
 
-
+/**
+ * POST /api/attendance/punch
+ * Records a real-time Time-In or Time-Out event for the authenticated employee.
+ */
 router.post('/punch', async (req, res) => {
 	try {
 		const { uid } = req.user;
@@ -112,6 +115,37 @@ router.post('/punch', async (req, res) => {
 	} catch (error) {
 		console.error('Punch endpoint error:', error);
 		return res.status(500).json({ error: 'Internal server processing failure.' });
+	}
+});
+
+/**
+ * GET /api/attendance/my-summary
+ * Fetches the historical trailing daily summaries for the logged-in employee.
+ */
+router.get('/my-summary', async (req, res) => {
+	try {
+		const { uid } = req.user;
+
+		const summarySnapshot = await db.collection('dailySummary')
+			.where('userId', '==', uid)
+			.orderBy('date', 'desc')
+			.limit(30)
+			.get();
+
+		const historicalData = [];
+		summarySnapshot.forEach(doc => {
+			historicalData.push({ id: doc.id, ...doc.data() });
+		});
+
+		return res.status(200).json({
+			status: 'success',
+			count: historicalData.length,
+			data: historicalData
+		});
+
+	} catch (error) {
+		console.error('[MiniHCM Error] Failed to fetch personal summaries:', error);
+		return res.status(500).json({ error: 'Could not retrieve your summary history logs.' });
 	}
 });
 

@@ -1,7 +1,8 @@
 import express from 'express';
 import admin from 'firebase-admin';
-import attendanceRouter from './routes/attendance.js'
 import { verifyFirebaseToken } from './middleware/auth.js'
+import employeeAttendanceRouter from './routes/employeeAttendance.js'
+import adminAttendanceRouter from './routes/adminAttendance.js'
 
 const app = express();
 app.use(express.json()); // Essential to parse JSON request bodies from React
@@ -136,7 +137,8 @@ app.post('/api/auth/verify-token', async (req, res) => {
 	}
 });
 
-app.use('/api/attendance', verifyFirebaseToken, attendanceRouter);
+app.use('/api/attendance', verifyFirebaseToken, employeeAttendanceRouter);
+app.use('/api/admin/attendance', verifyFirebaseToken, adminAttendanceRouter);
 
 app.listen(PORT, () => {
 	console.log(`[MiniHCM] Active on internal port ${PORT}`);
