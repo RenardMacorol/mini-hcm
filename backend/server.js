@@ -1,3 +1,4 @@
+import cors from 'cors'
 import express from 'express';
 import admin from 'firebase-admin';
 import { verifyFirebaseToken } from './middleware/auth.js'
@@ -5,6 +6,11 @@ import employeeAttendanceRouter from './routes/employeeAttendance.js'
 import adminAttendanceRouter from './routes/adminAttendance.js'
 
 const app = express();
+app.use(cors({
+	origin: 'http://localhost:5173', // Explicitly allow your frontend server
+	methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+	allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json()); // Essential to parse JSON request bodies from React
 
 const PORT = process.env.PORT || 5000;
