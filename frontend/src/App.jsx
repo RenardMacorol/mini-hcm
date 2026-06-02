@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BACKEND_URL } from './backendConfig';
+import BACKEND_URL from './backendConfig';
 
 import LandingPage from './views/LandingPage';
 import LoginPage from './views/LoginPage';
