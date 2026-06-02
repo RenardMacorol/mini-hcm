@@ -20,7 +20,8 @@ services:
       - /app/node_modules 
     environment:
       - PORT=5000
-      - FIREBASE_AUTH_EMULATOR_HOST=firebase-emulator:9099
-      - FIRESTORE_EMULATOR_HOST=firebase-emulator:8081
-
-  
+      - FIREBASE_AUTH_EMULATOR_HOST=host.docker.internal:9099
+      - FIRESTORE_EMULATOR_HOST=host.docker.internal:8081
+    # Add these two lines right here:
+    extra_hosts:
+      - "host.docker.internal:host-gateway" 
