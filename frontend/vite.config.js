@@ -9,5 +9,13 @@ export default defineConfig({
 		watch: {
 			usePolling: true, // Necessary for hot-reloading across Docker volumes on Arch
 		},
+		proxy: {
+			// Catch all requests starting with /api and redirect them to the backend container
+			'/api': {
+				target: 'http://backend:5000', // <-- Replace 'backend' with your actual compose service name if different
+				changeOrigin: true,
+				secure: false,
+			}
+		}
 	},
 });

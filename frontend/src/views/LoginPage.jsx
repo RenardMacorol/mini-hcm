@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { THEME, commonStyles } from '../components/CommonStyles';
+
 const LoginPage = ({ setView, setUser }) => {
 	const [email, setEmail] = useState('');
 	const [password, setPassword] = useState('');
@@ -20,10 +21,20 @@ const LoginPage = ({ setView, setUser }) => {
 			const data = await response.json();
 
 			if (!response.ok) {
-				throw new Error(data.message || 'Invalid login details.');
+				// The backend sends error details in data.error or data.details
+				throw new Error(data.error || data.details || 'Invalid login details.');
 			}
 
-			// Expect backend payload to include role, name, shift configs
+			// ==========================================
+			// ✨ THE FIX: Store the fresh token from your backend response
+			// ==========================================
+			if (data.idToken) {
+				localStorage.setItem('authToken', data.idToken);
+			} else {
+				throw new Error('Authentication token missing from server response.');
+			}
+
+			// Set user profile state and redirect to dashboard
 			setUser(data.user);
 			setView('dashboard');
 		} catch (err) {

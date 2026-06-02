@@ -1,5 +1,5 @@
-import express from 'express';
 import { db } from '../server.js';
+import express from 'express';
 import { requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
