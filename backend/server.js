@@ -7,8 +7,9 @@ import adminAttendanceRouter from './routes/adminAttendance.js'
 import authRouter from './routes/auth.js'
 
 const app = express();
+
 app.use(cors({
-	origin: 'http://localhost:5173', // Explicitly allow your frontend server
+	origin: ['https://mini-hcm-b2108.web.app', 'http://localhost:5173'], // Explicitly allow your frontend server
 	methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
 	allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -148,6 +149,11 @@ app.use('/api/auth', authRouter);
 app.use('/api/attendance', verifyFirebaseToken, employeeAttendanceRouter);
 app.use('/api/admin/attendance', verifyFirebaseToken, adminAttendanceRouter);
 
-app.listen(PORT, () => {
-	console.log(`[MiniHCM] Active on internal port ${PORT}`);
-});
+export default app;
+
+// Keep your local listening port inside a conditional block so it doesn't break locally
+if (process.env.NODE_ENV !== 'production') {
+	const PORT = process.env.PORT || 8080;
+	app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+}
+
