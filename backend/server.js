@@ -27,10 +27,13 @@ if (process.env.FIRESTORE_EMULATOR_HOST || process.env.FIREBASE_AUTH_EMULATOR_HO
 	// When using local emulators, we can pass a dummy project ID without a real credential file
 	admin.initializeApp({ projectId: "mini-hcm-b2108" });
 } else {
-	// Production Fallback
+	// Production Fallback using explicit environment variable
+	const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+
 	admin.initializeApp({
-		credential: admin.credential.applicationDefault()
+		credential: admin.credential.cert(serviceAccount)
 	});
+
 }
 
 export const db = admin.firestore()
