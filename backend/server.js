@@ -49,6 +49,7 @@ if (process.env.FIRESTORE_EMULATOR_HOST || process.env.FIREBASE_AUTH_EMULATOR_HO
 }
 
 export const db = admin.firestore()
+app.set('db', db)
 
 
 // Sanity Check Endpoint

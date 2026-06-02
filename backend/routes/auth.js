@@ -1,6 +1,5 @@
 import express from 'express';
 import admin from 'firebase-admin';
-import { db } from '../server.js'; // Adjust based on your directory layout
 
 const router = express.Router();
 
@@ -14,6 +13,13 @@ router.post('/login', async (req, res) => {
 
 		if (!email || !password) {
 			return res.status(400).json({ error: "Email and password are required." });
+		}
+
+		// 1. ✨ FIX: Grab the shared db instance dynamically from the Express app instance
+		const db = req.app.get('db');
+		if (!db) {
+			console.error("❌ CRITICAL: Firestore database instance was not passed down from server.js!");
+			return res.status(500).json({ error: "Database context uninitialized." });
 		}
 
 		const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY || "AIzaSyFakeKeyForEmulator";
