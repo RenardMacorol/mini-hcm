@@ -108,6 +108,37 @@ app.post('/api/auth/register', async (req, res) => {
 	}
 });
 
+app.get('/api/auth/verify', verifyFirebaseToken, async (req, res) => {
+	try {
+		// `verifyFirebaseToken` should attach decoded token to req.user
+		return res.status(200).json({
+			valid: true,
+			user: req.user, // decoded Firebase token
+		});
+	} catch (error) {
+		return res.status(401).json({
+			valid: false,
+			error: "Invalid or expired token",
+		});
+	}
+});
+
+app.get('/api/auth/me', verifyFirebaseToken, async (req, res) => {
+	const uid = req.user.uid;
+
+	const userDoc = await db.collection('users').doc(uid).get();
+
+	if (!userDoc.exists) {
+		return res.status(404).json({ error: "User profile not found" });
+	}
+
+	return res.json({
+		auth: req.user,
+		profile: userDoc.data()
+	});
+});
+
+
 
 app.use('/api/attendance', verifyFirebaseToken, employeeAttendanceRouter);
 app.use('/api/admin/attendance', verifyFirebaseToken, adminAttendanceRouter);
