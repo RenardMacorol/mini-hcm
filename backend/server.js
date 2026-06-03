@@ -4,7 +4,6 @@ import admin from 'firebase-admin';
 import { verifyFirebaseToken } from './middleware/auth.js'
 import employeeAttendanceRouter from './routes/employeeAttendance.js'
 import adminAttendanceRouter from './routes/adminAttendance.js'
-import authRouter from './routes/auth.js'
 
 const app = express();
 
@@ -30,22 +29,9 @@ if (process.env.FIRESTORE_EMULATOR_HOST || process.env.FIREBASE_AUTH_EMULATOR_HO
 	admin.initializeApp({ projectId: "mini-hcm-b2108" });
 } else {
 	// Production Fallback matching your exact Vercel variable name
-	const envKey = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+	const serviceAccount = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS);
 
-	if (!envKey) {
-		console.error("❌ CRITICAL ERROR: GOOGLE_APPLICATION_CREDENTIALS environment variable is missing from Vercel!");
-	} else {
-		try {
-			const serviceAccount = JSON.parse(envKey);
-			admin.initializeApp({
-				credential: admin.credential.cert(serviceAccount)
-			});
-			console.log("✅ Firebase Admin successfully initialized!");
-		} catch (parseError) {
-			console.error("❌ CRITICAL ERROR: Failed to parse GOOGLE_APPLICATION_CREDENTIALS. Ensure it is a valid JSON string.");
-			console.error(parseError);
-		}
-	}
+	admin.initializeApp({ credential: admin.credential.cert(serviceAccount) })
 }
 
 export const db = admin.firestore()
@@ -100,7 +86,7 @@ app.post('/api/auth/register', async (req, res) => {
 			createdAt: admin.firestore.FieldValue.serverTimestamp()
 		};
 
-		await db.collection('users').doc(userRecord.uid).set(userProfile);
+		await db.collection('users').doc(userRecord.uid).set(userProfile, { merge: false });
 
 		const clientResponseDate = new Date().toISOString();
 
@@ -122,55 +108,22 @@ app.post('/api/auth/register', async (req, res) => {
 	}
 });
 
-/**
- * 3. TOKEN AUTHENTICATION VERIFICATION ENDPOINT
- * POST /api/auth/verify-token
- * Frontend React apps receive an ID token from Firebase upon login.
- * This endpoint verifies that token and retrieves the backend profile.
- */
-app.post('/api/auth/verify-token', async (req, res) => {
-	try {
-		const { idToken } = req.body;
 
-		if (!idToken) {
-			return res.status(400).json({ error: "No ID Token provided." });
-		}
-
-		// Validate token integrity via Admin SDK auth subsystem
-		const decodedToken = await admin.auth().verifyIdToken(idToken);
-		const uid = decodedToken.uid;
-
-		// Fetch corresponding application settings and schedule allocations
-		const userDoc = await db.collection('users').doc(uid).get();
-
-		if (!userDoc.exists) {
-			return res.status(404).json({ error: "User metadata record not found in Firestore." });
-		}
-
-		return res.json({
-			message: "Token is authentic and verified!",
-			user: userDoc.data()
-		});
-
-	} catch (error) {
-		console.error("Token verification error details:", error);
-		return res.status(401).json({
-			error: "Unauthorized: Invalid or expired token",
-			details: error.message
-		});
-	}
-});
-
-app.use('/api/auth', authRouter);
 app.use('/api/attendance', verifyFirebaseToken, employeeAttendanceRouter);
 app.use('/api/admin/attendance', verifyFirebaseToken, adminAttendanceRouter);
 
 
 // Keep your local listening port inside a conditional block so it doesn't break locally
 if (process.env.NODE_ENV !== 'production') {
-	const PORT = process.env.PORT || 8080;
 	app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 }
 
+app.use((err, req, res, next) => {
+	console.error(err);
+
+	res.status(500).json({
+		error: "Internal server error"
+	});
+});
 export default app;
 
