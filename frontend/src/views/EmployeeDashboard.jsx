@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import BACKEND_URL from '../backendConfig';
 import { THEME, commonStyles } from '../components/CommonStyles';
 
 const EmployeeDashboard = ({ user = {}, onLogout }) => {
@@ -13,6 +14,7 @@ const EmployeeDashboard = ({ user = {}, onLogout }) => {
 	const [currentTime, setCurrentTime] = useState(new Date());
 	const [punchInTime, setPunchInTime] = useState(null);
 	const [elapsedSeconds, setElapsedSeconds] = useState(0);
+	const API = (path) => `${BACKEND_URL}${path}`;
 
 	// Cumulative totals for the top summary grid
 	const [summaryMetrics, setSummaryMetrics] = useState({
@@ -63,13 +65,14 @@ const EmployeeDashboard = ({ user = {}, onLogout }) => {
 
 			const token = localStorage.getItem('authToken');
 
-			const response = await fetch('/api/attendance/my-summary', {
+
+			const response = await fetch(API('/api/attendance/my-summary', {
 				method: 'GET',
 				headers: {
 					'Content-Type': 'application/json',
 					'Authorization': `Bearer ${token}`
 				}
-			});
+			}));
 
 			const contentType = response.headers.get("content-type");
 			if (!contentType || !contentType.includes("application/json")) {
@@ -116,14 +119,14 @@ const EmployeeDashboard = ({ user = {}, onLogout }) => {
 		const token = localStorage.getItem('authToken');
 
 		try {
-			const response = await fetch('/api/attendance/punch', {
+			const response = await fetch(API('/api/attendance/punch', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
 					'Authorization': `Bearer ${token}`
 				},
 				body: JSON.stringify({ type: nextType })
-			});
+			}));
 
 			const data = await response.json();
 

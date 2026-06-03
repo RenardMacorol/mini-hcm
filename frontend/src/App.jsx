@@ -3,9 +3,9 @@ import BACKEND_URL from './backendConfig';
 
 import LandingPage from './views/LandingPage';
 import LoginPage from './views/LoginPage';
-import AccountSetupPage from './views/AccountSetupPage';
 import AdminDashboard from './views/AdminDashboard';
 import EmployeeDashboard from './views/EmployeeDashboard';
+import RegisterPage from './views/RegisterPage';
 
 // Theme Tokens (shared across views)
 const THEME = {
@@ -59,7 +59,7 @@ export const App = () => {
 		<div style={commonStyles.container}>
 			{currentView === 'landing' && <LandingPage setView={setCurrentView} user={user} />}
 			{currentView === 'login' && <LoginPage setView={setCurrentView} setUser={setUser} />}
-			{currentView === 'register' && <AccountSetupPage setView={setCurrentView} />}
+			{currentView === 'register' && <RegisterPage setView={setCurrentView} />}
 
 			{currentView === 'dashboard' && user && (
 				user.role === 'Admin'
