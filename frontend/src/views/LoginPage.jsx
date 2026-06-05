@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { THEME, commonStyles } from '../components/CommonStyles';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../firebase';
+import { useAuth } from '../context/AuthContext';
 
-const LoginPage = ({ setView, setUser }) => {
+const LoginPage = ({ setView }) => {
+	const { setUser } = useAuth();
 	const [email, setEmail] = useState('');
 	const [password, setPassword] = useState('');
 	const [status, setStatus] = useState({ loading: false, error: null });
@@ -13,12 +15,8 @@ const LoginPage = ({ setView, setUser }) => {
 		setStatus({ loading: true, error: null });
 
 		try {
-			const userCred = await signInWithEmailAndPassword(auth, email, password);
+			await signInWithEmailAndPassword(auth, email, password);
 
-			const token = await userCred.user.getIdToken();
-			localStorage.setItem('authToken', token);
-
-			setUser(userCred.user);
 			setView('dashboard');
 
 		} catch (err) {

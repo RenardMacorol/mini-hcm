@@ -66,14 +66,16 @@ const EmployeeDashboard = ({ user = {}, onLogout }) => {
 			const token = localStorage.getItem('authToken');
 
 
-			const response = await fetch(API('/api/attendance/my-summary', {
-				method: 'GET',
-				headers: {
-					'Content-Type': 'application/json',
-					'Authorization': `Bearer ${token}`
+			const response = await fetch(
+				API('/api/attendance/my-summary'),
+				{
+					method: 'GET',
+					headers: {
+						'Content-Type': 'application/json',
+						'Authorization': `Bearer ${token}`
+					}
 				}
-			}));
-
+			)
 			const contentType = response.headers.get("content-type");
 			if (!contentType || !contentType.includes("application/json")) {
 				throw new Error(`Server returned non-JSON response (Status: ${response.status})`);
@@ -119,14 +121,17 @@ const EmployeeDashboard = ({ user = {}, onLogout }) => {
 		const token = localStorage.getItem('authToken');
 
 		try {
-			const response = await fetch(API('/api/attendance/punch', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					'Authorization': `Bearer ${token}`
-				},
-				body: JSON.stringify({ type: nextType })
-			}));
+			const response = await fetch(
+				API('/api/attendance/punch'),
+				{
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'Authorization': `Bearer ${token}`
+					},
+					body: JSON.stringify({ type: nextType })
+				}
+			);
 
 			const data = await response.json();
 

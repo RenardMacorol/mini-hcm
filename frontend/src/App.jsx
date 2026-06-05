@@ -6,6 +6,7 @@ import LoginPage from './views/LoginPage';
 import AdminDashboard from './views/AdminDashboard';
 import EmployeeDashboard from './views/EmployeeDashboard';
 import RegisterPage from './views/RegisterPage';
+import { useAuth } from './context/AuthContext.jsx';
 
 // Theme Tokens (shared across views)
 const THEME = {
@@ -45,27 +46,38 @@ const commonStyles = {
 
 export const App = () => {
 	// Simple Client-Side Router State: 'landing' | 'login' | 'register' | 'dashboard'
+	const { user, logout, loading } = useAuth();
 	const [currentView, setCurrentView] = useState('landing');
-	const [user, setUser] = useState(null); // Stores logged-in user context { name, email, role, etc. }
 
-	// Handle standard logouts
-	const handleLogout = () => {
+	const handleLogout = async () => {
+		await auth.signOut();
+		localStorage.removeItem("authToken");
 		setUser(null);
-		setCurrentView('landing');
+		setCurrentView("landing"); // or login
 	};
 
-	// Conditional view rendering
+	if (loading) {
+		return <div>Loading session...</div>;
+	}
+
 	return (
 		<div style={commonStyles.container}>
-			{currentView === 'landing' && <LandingPage setView={setCurrentView} user={user} />}
-			{currentView === 'login' && <LoginPage setView={setCurrentView} setUser={setUser} />}
-			{currentView === 'register' && <RegisterPage setView={setCurrentView} />}
+			{currentView === "landing" && <LandingPage setView={setCurrentView} user={user} />}
 
-			{currentView === 'dashboard' && user && (
-				user.role === 'Admin'
-					? <AdminDashboard user={user} onLogout={handleLogout} setView={setCurrentView} />
-					: <EmployeeDashboard user={user} onLogout={handleLogout} />
+			{currentView === "login" && (
+				<LoginPage setView={setCurrentView} />
+			)}
+
+			{currentView === "register" && (
+				<RegisterPage setView={setCurrentView} />
+			)}
+
+			{currentView === "dashboard" && user && (
+				user.role === "admin"
+					? <AdminDashboard user={user} onLogout={logout} setView={setCurrentView} />
+					: <EmployeeDashboard user={user} onLogout={logout} />
 			)}
 		</div>
 	);
+
 };

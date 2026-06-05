@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { THEME, commonStyles } from '../components/CommonStyles';
+import BACKEND_URL from '../backendConfig';
+import { useAuth } from '../context/AuthContext';
 
-const AdminDashboard = ({ user = {}, onLogout, setView }) => {
+const AdminDashboard = ({ onLogout, setView }) => {
+	//User
+	const { user } = useAuth();
+	const token = user?.token;
 	// --- STATE MANAGEMENT ---
 	const [currentTab, setCurrentTab] = useState('daily'); // 'daily' | 'weekly' | 'punches'
 	const [loading, setLoading] = useState(false);
@@ -22,17 +27,24 @@ const AdminDashboard = ({ user = {}, onLogout, setView }) => {
 		latenessMinutes: 0,
 		undertimeMinutes: 0
 	});
+	const API = (path) => `${BACKEND_URL}${path}`;
 
 	// --- FETCH DATA CONTROLLER ---
 	const fetchAdminData = async (tab) => {
+		if (!user?.token) {
+			setErrorMessage("No auth token found");
+			return;
+		}
 		setLoading(true);
 		setErrorMessage('');
-		const token = localStorage.getItem('authToken');
+
+
+		const token = user?.token
 
 		// Map directly to your actual API endpoints
-		let endpoint = `/api/admin/attendance/daily-report?date=${selectedDate}`;
-		if (tab === 'weekly') endpoint = `/api/admin/attendance/weekly-report?startOfWeek=${selectedWeek}`;
-		if (tab === 'punches') endpoint = '/api/admin/attendance/punches';
+		let endpoint = API(`/api/admin/attendance/daily-report?date=${selectedDate}`);
+		if (tab === 'weekly') endpoint = API(`/api/admin/attendance/weekly-report?startOfWeek=${selectedWeek}`);
+		if (tab === 'punches') endpoint = API('/api/admin/attendance/punches');
 
 		try {
 			const response = await fetch(endpoint, {
@@ -63,8 +75,9 @@ const AdminDashboard = ({ user = {}, onLogout, setView }) => {
 
 	// Refresh lists whenever the view tab or filter criteria shifts
 	useEffect(() => {
+		if (!user?.token) return;
 		fetchAdminData(currentTab);
-	}, [currentTab, selectedDate, selectedWeek]);
+	}, [currentTab, selectedDate, selectedWeek, user?.token]);
 
 	// --- EDIT / UPDATE ACTION HANDLERS ---
 	const handleStartEdit = (log) => {
@@ -83,10 +96,10 @@ const AdminDashboard = ({ user = {}, onLogout, setView }) => {
 	};
 
 	const handleSavePunch = async (id) => {
-		const token = localStorage.getItem('authToken');
+		const token = user?.token;
 		try {
 			// Matches: PUT /api/admin/attendance/punch/:id
-			const response = await fetch(`/api/admin/attendance/punch/${id}`, {
+			const response = await fetch(API(`/api/admin/attendance/punch/${id}`), {
 				method: 'PUT',
 				headers: {
 					'Content-Type': 'application/json',

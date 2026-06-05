@@ -1,7 +1,7 @@
 import cors from 'cors'
 import express from 'express';
 import admin from 'firebase-admin';
-import { verifyFirebaseToken } from './middleware/auth.js'
+import { requireAdmin, verifyFirebaseToken } from './middleware/auth.js'
 import employeeAttendanceRouter from './routes/employeeAttendance.js'
 import adminAttendanceRouter from './routes/adminAttendance.js'
 
@@ -141,7 +141,7 @@ app.get('/api/auth/me', verifyFirebaseToken, async (req, res) => {
 
 
 app.use('/api/attendance', verifyFirebaseToken, employeeAttendanceRouter);
-app.use('/api/admin/attendance', verifyFirebaseToken, adminAttendanceRouter);
+app.use('/api/admin/attendance', verifyFirebaseToken, requireAdmin, adminAttendanceRouter);
 
 
 // Keep your local listening port inside a conditional block so it doesn't break locally
