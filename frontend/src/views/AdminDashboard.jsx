@@ -4,6 +4,7 @@ import BACKEND_URL from '../backendConfig';
 import { useAuth } from '../context/AuthContext';
 
 const AdminDashboard = ({ onLogout, setView }) => {
+	const API = (path) => `${BACKEND_URL}${path}`;
 	//User
 	const { user } = useAuth();
 	const token = user?.token;
@@ -27,7 +28,6 @@ const AdminDashboard = ({ onLogout, setView }) => {
 		latenessMinutes: 0,
 		undertimeMinutes: 0
 	});
-	const API = (path) => `${BACKEND_URL}${path}`;
 
 	// --- FETCH DATA CONTROLLER ---
 	const fetchAdminData = async (tab) => {
@@ -82,14 +82,16 @@ const AdminDashboard = ({ onLogout, setView }) => {
 	// --- EDIT / UPDATE ACTION HANDLERS ---
 	const handleStartEdit = (log) => {
 		setEditingPunchId(log.id);
+		// ✅ Read from log.metrics, not log directly
 		setEditForm({
-			regularHours: log.regularHours || 0,
-			overtimeHours: log.overtimeHours || 0,
-			nightDiffHours: log.nightDiffHours || 0,
-			latenessMinutes: log.latenessMinutes || 0,
-			undertimeMinutes: log.undertimeMinutes || 0
+			regularHours: log.metrics?.regularHours ?? 0,
+			overtimeHours: log.metrics?.overtimeHours ?? 0,
+			nightDiffHours: log.metrics?.nightDiffHours ?? 0,
+			latenessMinutes: log.metrics?.latenessMinutes ?? 0,
+			undertimeMinutes: log.metrics?.undertimeMinutes ?? 0,
 		});
 	};
+
 
 	const handleCancelEdit = () => {
 		setEditingPunchId(null);
@@ -113,7 +115,7 @@ const AdminDashboard = ({ onLogout, setView }) => {
 			if (!response.ok) throw new Error(resData.error || 'Failed to save punch adjustments.');
 
 			setEditingPunchId(null);
-			fetchAdminData('punches');
+			await fetchAdminData('punches');
 		} catch (err) {
 			setErrorMessage(err.message);
 		}
@@ -278,7 +280,7 @@ const AdminDashboard = ({ onLogout, setView }) => {
 																value={editForm.regularHours}
 																onChange={(e) => setEditForm({ ...editForm, regularHours: parseFloat(e.target.value) || 0 })}
 															/>
-														) : `${log.regularHours?.toFixed(2) || '0.00'}h`}
+														) : `${log.metrics.regularHours?.toFixed(2) || '0.00'}h`}
 													</td>
 
 													<td style={styles.td}>
@@ -290,7 +292,7 @@ const AdminDashboard = ({ onLogout, setView }) => {
 																value={editForm.overtimeHours}
 																onChange={(e) => setEditForm({ ...editForm, overtimeHours: parseFloat(e.target.value) || 0 })}
 															/>
-														) : `${log.overtimeHours?.toFixed(2) || '0.00'}h`}
+														) : `${log.metrics.overtimeHours?.toFixed(2) || '0.00'}h`}
 													</td>
 
 													<td style={styles.td}>
@@ -302,7 +304,7 @@ const AdminDashboard = ({ onLogout, setView }) => {
 																value={editForm.nightDiffHours}
 																onChange={(e) => setEditForm({ ...editForm, nightDiffHours: parseFloat(e.target.value) || 0 })}
 															/>
-														) : `${log.nightDiffHours?.toFixed(2) || '0.00'}h`}
+														) : `${log.metrics.nightDiffHours?.toFixed(2) || '0.00'}h`}
 													</td>
 
 													<td style={styles.td}>
@@ -313,7 +315,7 @@ const AdminDashboard = ({ onLogout, setView }) => {
 																value={editForm.latenessMinutes}
 																onChange={(e) => setEditForm({ ...editForm, latenessMinutes: parseInt(e.target.value) || 0 })}
 															/>
-														) : `${log.latenessMinutes || 0}m`}
+														) : `${log.metrics.latenessMinutes || 0}m`}
 													</td>
 
 													<td style={styles.td}>
@@ -324,7 +326,7 @@ const AdminDashboard = ({ onLogout, setView }) => {
 																value={editForm.undertimeMinutes}
 																onChange={(e) => setEditForm({ ...editForm, undertimeMinutes: parseInt(e.target.value) || 0 })}
 															/>
-														) : `${log.undertimeMinutes || 0}m`}
+														) : `${log.metrics.undertimeMinutes || 0}m`}
 													</td>
 
 													<td style={{ ...styles.td, textAlign: 'right' }}>

@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import BACKEND_URL from '../backendConfig';
 import { THEME, commonStyles } from '../components/CommonStyles';
+import { useAuth } from '../context/AuthContext';
 
-const EmployeeDashboard = ({ user = {}, onLogout }) => {
+const EmployeeDashboard = ({ onLogout, setView }) => {
+	const API = (path) => `${BACKEND_URL}${path}`;
+	const { user } = useAuth();
+	const token = user?.token;
 	// --- STATE MANAGEMENT ---
 	const [punchStatus, setPunchStatus] = useState('OUT'); // Toggles between 'IN' and 'OUT'
 	const [loading, setLoading] = useState(false);
@@ -14,7 +18,6 @@ const EmployeeDashboard = ({ user = {}, onLogout }) => {
 	const [currentTime, setCurrentTime] = useState(new Date());
 	const [punchInTime, setPunchInTime] = useState(null);
 	const [elapsedSeconds, setElapsedSeconds] = useState(0);
-	const API = (path) => `${BACKEND_URL}${path}`;
 
 	// Cumulative totals for the top summary grid
 	const [summaryMetrics, setSummaryMetrics] = useState({
@@ -59,66 +62,67 @@ const EmployeeDashboard = ({ user = {}, onLogout }) => {
 
 	// --- FETCH BACKEND DATA ---
 	const fetchSummaryHistory = async () => {
-		try {
-			setFetching(true);
-			setErrorMessage('');
+		if (!user?.token)
+			try {
+				setFetching(true);
+				setErrorMessage('');
 
-			const token = localStorage.getItem('authToken');
+				const token = user?.token;
 
 
-			const response = await fetch(
-				API('/api/attendance/my-summary'),
-				{
-					method: 'GET',
-					headers: {
-						'Content-Type': 'application/json',
-						'Authorization': `Bearer ${token}`
+				const response = await fetch(
+					API('/api/attendance/my-summary'),
+					{
+						method: 'GET',
+						headers: {
+							'Content-Type': 'application/json',
+							'Authorization': `Bearer ${token}`
+						}
 					}
+				)
+				const contentType = response.headers.get("content-type");
+				if (!contentType || !contentType.includes("application/json")) {
+					throw new Error(`Server returned non-JSON response (Status: ${response.status})`);
 				}
-			)
-			const contentType = response.headers.get("content-type");
-			if (!contentType || !contentType.includes("application/json")) {
-				throw new Error(`Server returned non-JSON response (Status: ${response.status})`);
+
+				const resData = await response.json();
+
+				if (!response.ok) {
+					throw new Error(resData.error || 'Failed to sync metrics from server.');
+				}
+
+				if (resData.status === 'success' && resData.data) {
+					const logs = resData.data;
+					setHistoryLogs(logs);
+
+					const totals = logs.reduce((acc, currentDoc) => ({
+						regularHours: acc.regularHours + (currentDoc.regularHours || 0),
+						overtimeHours: acc.overtimeHours + (currentDoc.overtimeHours || 0),
+						nightDiffHours: acc.nightDiffHours + (currentDoc.nightDiffHours || 0),
+						latenessMinutes: acc.latenessMinutes + (currentDoc.latenessMinutes || 0),
+						undertimeMinutes: acc.undertimeMinutes + (currentDoc.undertimeMinutes || 0)
+					}), { regularHours: 0, overtimeHours: 0, nightDiffHours: 0, latenessMinutes: 0, undertimeMinutes: 0 });
+
+					setSummaryMetrics(totals);
+				}
+			} catch (err) {
+				setErrorMessage(err.message);
+			} finally {
+				setFetching(false);
 			}
-
-			const resData = await response.json();
-
-			if (!response.ok) {
-				throw new Error(resData.error || 'Failed to sync metrics from server.');
-			}
-
-			if (resData.status === 'success' && resData.data) {
-				const logs = resData.data;
-				setHistoryLogs(logs);
-
-				const totals = logs.reduce((acc, currentDoc) => ({
-					regularHours: acc.regularHours + (currentDoc.regularHours || 0),
-					overtimeHours: acc.overtimeHours + (currentDoc.overtimeHours || 0),
-					nightDiffHours: acc.nightDiffHours + (currentDoc.nightDiffHours || 0),
-					latenessMinutes: acc.latenessMinutes + (currentDoc.latenessMinutes || 0),
-					undertimeMinutes: acc.undertimeMinutes + (currentDoc.undertimeMinutes || 0)
-				}), { regularHours: 0, overtimeHours: 0, nightDiffHours: 0, latenessMinutes: 0, undertimeMinutes: 0 });
-
-				setSummaryMetrics(totals);
-			}
-		} catch (err) {
-			setErrorMessage(err.message);
-		} finally {
-			setFetching(false);
-		}
 	};
 
 	// Run data fetch on initial dashboard layout load
 	useEffect(() => {
 		fetchSummaryHistory();
-	}, []);
+	}, [user?.token]);
 
 	// --- CLOCK ACTION CONTROLLER ---
 	const handlePunchToggle = async () => {
 		setLoading(true);
 		setErrorMessage('');
 		const nextType = punchStatus === 'OUT' ? 'IN' : 'OUT';
-		const token = localStorage.getItem('authToken');
+		const token = user?.token;
 
 		try {
 			const response = await fetch(
