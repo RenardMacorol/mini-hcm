@@ -2,38 +2,46 @@ import React, { useState, useEffect } from 'react';
 import BACKEND_URL from '../backendConfig';
 import { THEME, commonStyles } from '../components/CommonStyles';
 import { useAuth } from '../context/AuthContext';
+import {
+	RiTimeLine,
+	RiLogoutBoxLine,
+	RiUserLine,
+	RiCalendar2Line,
+	RiGpsLine,
+	RiBarChartBoxLine,
+	RiHistoryLine,
+	RiAlertLine,
+	RiClockwiseLine,
+	RiMoonLine,
+	RiTimerLine,
+	RiArrowDownSLine,
+} from 'react-icons/ri';
 
 const EmployeeDashboard = ({ onLogout, setView }) => {
 	const API = (path) => `${BACKEND_URL}${path}`;
 	const { user } = useAuth();
 	const token = user?.token;
-	// --- STATE MANAGEMENT ---
-	const [punchStatus, setPunchStatus] = useState('OUT'); // Toggles between 'IN' and 'OUT'
+
+	const [punchStatus, setPunchStatus] = useState('OUT');
 	const [loading, setLoading] = useState(false);
 	const [fetching, setFetching] = useState(true);
 	const [errorMessage, setErrorMessage] = useState('');
 	const [historyLogs, setHistoryLogs] = useState([]);
 
-	// Live tracking states
 	const [currentTime, setCurrentTime] = useState(new Date());
 	const [punchInTime, setPunchInTime] = useState(null);
 	const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
-	// Cumulative totals for the top summary grid
 	const [summaryMetrics, setSummaryMetrics] = useState({
 		regularHours: 0,
 		overtimeHours: 0,
 		nightDiffHours: 0,
 		latenessMinutes: 0,
-		undertimeMinutes: 0
+		undertimeMinutes: 0,
 	});
 
-	// --- LIVE TIME & RUNNING CLOCK EFFECT ---
 	useEffect(() => {
-		const timer = setInterval(() => {
-			setCurrentTime(new Date());
-		}, 1000);
-
+		const timer = setInterval(() => setCurrentTime(new Date()), 1000);
 		return () => clearInterval(timer);
 	}, []);
 
@@ -48,11 +56,9 @@ const EmployeeDashboard = ({ onLogout, setView }) => {
 		} else {
 			setElapsedSeconds(0);
 		}
-
 		return () => clearInterval(interval);
 	}, [punchStatus, punchInTime]);
 
-	// Format helper for the stopwatch (HH:MM:SS)
 	const formatElapsedTime = (totalSeconds) => {
 		const hrs = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
 		const mins = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
@@ -60,100 +66,72 @@ const EmployeeDashboard = ({ onLogout, setView }) => {
 		return `${hrs}:${mins}:${secs}`;
 	};
 
-	// --- FETCH BACKEND DATA ---
 	const fetchSummaryHistory = async () => {
-		if (!user?.token)
-			try {
-				setFetching(true);
-				setErrorMessage('');
-
-				const token = user?.token;
-
-
-				const response = await fetch(
-					API('/api/attendance/my-summary'),
-					{
-						method: 'GET',
-						headers: {
-							'Content-Type': 'application/json',
-							'Authorization': `Bearer ${token}`
-						}
-					}
-				)
-				const contentType = response.headers.get("content-type");
-				if (!contentType || !contentType.includes("application/json")) {
-					throw new Error(`Server returned non-JSON response (Status: ${response.status})`);
-				}
-
-				const resData = await response.json();
-
-				if (!response.ok) {
-					throw new Error(resData.error || 'Failed to sync metrics from server.');
-				}
-
-				if (resData.status === 'success' && resData.data) {
-					const logs = resData.data;
-					setHistoryLogs(logs);
-
-					const totals = logs.reduce((acc, currentDoc) => ({
-						regularHours: acc.regularHours + (currentDoc.regularHours || 0),
-						overtimeHours: acc.overtimeHours + (currentDoc.overtimeHours || 0),
-						nightDiffHours: acc.nightDiffHours + (currentDoc.nightDiffHours || 0),
-						latenessMinutes: acc.latenessMinutes + (currentDoc.latenessMinutes || 0),
-						undertimeMinutes: acc.undertimeMinutes + (currentDoc.undertimeMinutes || 0)
-					}), { regularHours: 0, overtimeHours: 0, nightDiffHours: 0, latenessMinutes: 0, undertimeMinutes: 0 });
-
-					setSummaryMetrics(totals);
-				}
-			} catch (err) {
-				setErrorMessage(err.message);
-			} finally {
-				setFetching(false);
+		if (!user?.token) return;
+		try {
+			setFetching(true);
+			setErrorMessage('');
+			const response = await fetch(API('/api/attendance/my-summary'), {
+				method: 'GET',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${user.token}`,
+				},
+			});
+			const contentType = response.headers.get('content-type');
+			if (!contentType || !contentType.includes('application/json')) {
+				throw new Error(`Server returned non-JSON response (Status: ${response.status})`);
 			}
+			const resData = await response.json();
+			if (!response.ok) throw new Error(resData.error || 'Failed to sync metrics from server.');
+			if (resData.status === 'success' && resData.data) {
+				const logs = resData.data;
+				setHistoryLogs(logs);
+				const totals = logs.reduce(
+					(acc, doc) => ({
+						regularHours: acc.regularHours + (doc.regularHours || 0),
+						overtimeHours: acc.overtimeHours + (doc.overtimeHours || 0),
+						nightDiffHours: acc.nightDiffHours + (doc.nightDiffHours || 0),
+						latenessMinutes: acc.latenessMinutes + (doc.latenessMinutes || 0),
+						undertimeMinutes: acc.undertimeMinutes + (doc.undertimeMinutes || 0),
+					}),
+					{ regularHours: 0, overtimeHours: 0, nightDiffHours: 0, latenessMinutes: 0, undertimeMinutes: 0 }
+				);
+				setSummaryMetrics(totals);
+			}
+		} catch (err) {
+			setErrorMessage(err.message);
+		} finally {
+			setFetching(false);
+		}
 	};
 
-	// Run data fetch on initial dashboard layout load
 	useEffect(() => {
 		fetchSummaryHistory();
 	}, [user?.token]);
 
-	// --- CLOCK ACTION CONTROLLER ---
 	const handlePunchToggle = async () => {
 		setLoading(true);
 		setErrorMessage('');
 		const nextType = punchStatus === 'OUT' ? 'IN' : 'OUT';
-		const token = user?.token;
-
 		try {
-			const response = await fetch(
-				API('/api/attendance/punch'),
-				{
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-						'Authorization': `Bearer ${token}`
-					},
-					body: JSON.stringify({ type: nextType })
-				}
-			);
-
+			const response = await fetch(API('/api/attendance/punch'), {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${user.token}`,
+				},
+				body: JSON.stringify({ type: nextType }),
+			});
 			const data = await response.json();
-
-			if (!response.ok) {
-				throw new Error(data.error || 'An error occurred processing the time stamp.');
-			}
-
+			if (!response.ok) throw new Error(data.error || 'An error occurred processing the time stamp.');
 			setPunchStatus(nextType);
-
-			// Set or clear the timestamp based on modern punch action
 			if (nextType === 'IN') {
 				setPunchInTime(new Date());
 			} else {
 				setPunchInTime(null);
 			}
-
 			await fetchSummaryHistory();
-			// Removed alert(data.message) to prevent popups
 		} catch (err) {
 			setErrorMessage(err.message);
 		} finally {
@@ -161,131 +139,336 @@ const EmployeeDashboard = ({ onLogout, setView }) => {
 		}
 	};
 
-	// --- VIEWS / CSS OBJECT STYLES ---
-	const styles = {
-		container: { maxWidth: '1000px', margin: '40px auto', padding: '0 20px', fontFamily: 'system-ui, sans-serif' },
-		card: { backgroundColor: THEME.surface, borderRadius: THEME.radius, padding: '32px', border: `1px solid ${THEME.border}`, marginBottom: '24px' },
-		scheduleBox: { backgroundColor: '#f1f5f9', padding: '16px', borderRadius: '8px', marginTop: '16px', borderLeft: `4px solid ${THEME.info}` },
-		grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px', marginTop: '20px' },
-		metricBox: { padding: '16px', borderRadius: '8px', border: `1px solid ${THEME.border}`, textAlign: 'center' },
-		tableContainer: { overflowX: 'auto', marginTop: '16px' },
-		table: { width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' },
-		th: { backgroundColor: '#f8fafc', padding: '12px', borderBottom: `2px solid ${THEME.border}`, color: THEME.textMuted },
-		td: { padding: '12px', borderBottom: `1px solid ${THEME.border}` },
-		error: { padding: '12px', backgroundColor: '#fff5f5', color: '#c53030', borderRadius: '6px', marginBottom: '16px', fontSize: '14px' },
-		liveClockText: { marginTop: '12px', fontSize: '14px', color: THEME.textMuted, textAlign: 'center', fontWeight: '500' }
+	const metrics = [
+		{
+			label: 'Regular Hours',
+			value: `${summaryMetrics.regularHours.toFixed(2)}h`,
+			icon: <RiTimeLine size={18} />,
+			bg: '#f0fdf4',
+			color: THEME.success,
+		},
+		{
+			label: 'Overtime',
+			value: `${summaryMetrics.overtimeHours.toFixed(2)}h`,
+			icon: <RiClockwiseLine size={18} />,
+			bg: '#eff6ff',
+			color: THEME.info,
+		},
+		{
+			label: 'Night Differential',
+			value: `${summaryMetrics.nightDiffHours.toFixed(2)}h`,
+			icon: <RiMoonLine size={18} />,
+			bg: '#faf5ff',
+			color: '#7c3aed',
+		},
+		{
+			label: 'Late (mins)',
+			value: `${summaryMetrics.latenessMinutes}m`,
+			icon: <RiAlertLine size={18} />,
+			bg: '#fff5f5',
+			color: '#c53030',
+		},
+		{
+			label: 'Undertime (mins)',
+			value: `${summaryMetrics.undertimeMinutes}m`,
+			icon: <RiArrowDownSLine size={18} />,
+			bg: '#fffaf0',
+			color: '#dd6b20',
+		},
+	];
+
+	const s = {
+		page: {
+			maxWidth: '960px',
+			margin: '32px auto',
+			padding: '0 24px',
+			fontFamily: "'Inter', system-ui, sans-serif",
+		},
+		card: {
+			backgroundColor: '#ffffff',
+			borderRadius: '12px',
+			padding: '28px',
+			border: '1px solid #e2e8f0',
+			marginBottom: '20px',
+		},
+		sectionLabel: {
+			fontSize: '11px',
+			fontWeight: '700',
+			letterSpacing: '0.8px',
+			textTransform: 'uppercase',
+			color: THEME.textMuted,
+			marginBottom: '12px',
+		},
+		shiftBox: {
+			backgroundColor: '#f8fafc',
+			padding: '16px 20px',
+			borderRadius: '8px',
+			border: '1px solid #e2e8f0',
+			borderLeft: `3px solid ${THEME.info}`,
+		},
+		th: {
+			padding: '10px 14px',
+			fontSize: '11px',
+			fontWeight: '700',
+			letterSpacing: '0.6px',
+			textTransform: 'uppercase',
+			color: THEME.textMuted,
+			backgroundColor: '#f8fafc',
+			borderBottom: '1px solid #e2e8f0',
+			textAlign: 'left',
+		},
+		td: {
+			padding: '12px 14px',
+			fontSize: '13px',
+			borderBottom: '1px solid #f1f5f9',
+			color: THEME.text,
+		},
 	};
 
 	return (
-		<div style={styles.container}>
-			{errorMessage && <div style={styles.error}>⚠️ {errorMessage}</div>}
+		<div style={s.page}>
+			{errorMessage && (
+				<div
+					style={{
+						display: 'flex',
+						alignItems: 'center',
+						gap: '8px',
+						padding: '12px 16px',
+						backgroundColor: '#fff5f5',
+						color: '#c53030',
+						borderRadius: '8px',
+						marginBottom: '16px',
+						fontSize: '13px',
+						border: '1px solid #fed7d7',
+					}}
+				>
+					<RiAlertLine size={16} />
+					{errorMessage}
+				</div>
+			)}
 
-			{/* Top Panel: Profile & Punch Interface */}
-			<div style={styles.card}>
-				<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-					<div>
-						<h2 style={{ margin: 0 }}>👋 Hello, {user.name || 'Employee'}</h2>
-						<p style={{ color: THEME.textMuted, margin: '4px 0 0 0', fontSize: '14px' }}>Employee Portal</p>
+			{/* ─── PROFILE + PUNCH CARD ─── */}
+			<div style={s.card}>
+				{/* Header row */}
+				<div
+					style={{
+						display: 'flex',
+						justifyContent: 'space-between',
+						alignItems: 'flex-start',
+						marginBottom: '24px',
+					}}
+				>
+					<div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+						<div
+							style={{
+								width: '46px',
+								height: '46px',
+								borderRadius: '50%',
+								backgroundColor: '#eff6ff',
+								display: 'flex',
+								alignItems: 'center',
+								justifyContent: 'center',
+								color: THEME.primary,
+								fontWeight: '700',
+								fontSize: '16px',
+							}}
+						>
+							{user.name ? user.name.charAt(0).toUpperCase() : <RiUserLine size={20} />}
+						</div>
+						<div>
+							<h2 style={{ margin: 0, fontSize: '18px', fontWeight: '700', letterSpacing: '-0.3px' }}>
+								{user.name || 'Employee'}
+							</h2>
+							<p style={{ margin: '2px 0 0', fontSize: '13px', color: THEME.textMuted }}>
+								Employee Portal
+							</p>
+						</div>
 					</div>
-					<button style={{ ...commonStyles.btn, backgroundColor: THEME.border, color: THEME.text }} onClick={onLogout}>Logout</button>
+					<button
+						onClick={onLogout}
+						style={{
+							display: 'flex',
+							alignItems: 'center',
+							gap: '6px',
+							padding: '7px 14px',
+							backgroundColor: 'transparent',
+							color: '#e53e3e',
+							border: '1px solid #fed7d7',
+							borderRadius: '8px',
+							fontWeight: '600',
+							fontSize: '13px',
+							cursor: 'pointer',
+						}}
+					>
+						<RiLogoutBoxLine size={15} />
+						Logout
+					</button>
 				</div>
 
-				<h3>📅 Assigned Shift Breakdown</h3>
-				<div style={styles.scheduleBox}>
-					<p style={{ margin: '0 0 8px 0', fontWeight: '600' }}>Timezone: {user.timezone || 'Asia/Manila'}</p>
-					<p style={{ margin: 0, fontSize: '15px' }}>
-						⏰ Shift Hours: <strong>{user.schedule?.start || 'N/A'}</strong> to <strong>{user.schedule?.end || 'N/A'}</strong>
-					</p>
+				{/* Shift Info */}
+				<p style={s.sectionLabel}>Assigned Shift</p>
+				<div style={s.shiftBox}>
+					<div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+						<RiCalendar2Line size={15} color={THEME.info} />
+						<span style={{ fontSize: '13px', fontWeight: '600', color: THEME.textMuted }}>
+							Timezone: {user.timezone || 'Asia/Manila'}
+						</span>
+					</div>
+					<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+						<RiTimeLine size={15} color={THEME.info} />
+						<span style={{ fontSize: '14px' }}>
+							Shift:{' '}
+							<strong>{user.schedule?.start || 'N/A'}</strong>
+							{' — '}
+							<strong>{user.schedule?.end || 'N/A'}</strong>
+						</span>
+					</div>
 				</div>
 
+				{/* Punch Button */}
 				<div style={{ marginTop: '24px' }}>
 					<button
-						style={{
-							...commonStyles.btn,
-							backgroundColor: punchStatus === 'OUT' ? THEME.success : '#e53e3e',
-							color: '#fff',
-							width: '100%',
-							opacity: loading ? 0.7 : 1,
-							cursor: loading ? 'not-allowed' : 'pointer'
-						}}
 						onClick={handlePunchToggle}
 						disabled={loading}
+						style={{
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'center',
+							gap: '10px',
+							width: '100%',
+							padding: '14px',
+							backgroundColor: punchStatus === 'OUT' ? THEME.success : '#e53e3e',
+							color: '#fff',
+							border: 'none',
+							borderRadius: '10px',
+							fontWeight: '700',
+							fontSize: '15px',
+							cursor: loading ? 'not-allowed' : 'pointer',
+							opacity: loading ? 0.7 : 1,
+							letterSpacing: '-0.2px',
+						}}
 					>
-						📍 {loading ? 'Processing...' : punchStatus === 'OUT' ? 'Clock In' : 'Clock Out'}
+						<RiGpsLine size={18} />
+						{loading ? 'Processing…' : punchStatus === 'OUT' ? 'Clock In' : 'Clock Out'}
 					</button>
 
-					{/* Live Clock & Shift Tracker Output */}
-					<div style={styles.liveClockText}>
-						🕒 Current Time: {currentTime.toLocaleTimeString()}
+					{/* Live time row */}
+					<div
+						style={{
+							display: 'flex',
+							justifyContent: 'center',
+							alignItems: 'center',
+							gap: '20px',
+							marginTop: '14px',
+							fontSize: '13px',
+							color: THEME.textMuted,
+						}}
+					>
+						<span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+							<RiTimeLine size={14} />
+							{currentTime.toLocaleTimeString('en-PH', { timeZone: 'Asia/Manila' })}
+						</span>
 						{punchStatus === 'IN' && (
-							<span style={{ marginLeft: '15px', color: THEME.success, fontWeight: 'bold' }}>
-								⏱️ Running Shift: {formatElapsedTime(elapsedSeconds)}
+							<span
+								style={{
+									display: 'flex',
+									alignItems: 'center',
+									gap: '5px',
+									fontWeight: '700',
+									color: THEME.success,
+								}}
+							>
+								<RiTimerLine size={14} />
+								Running: {formatElapsedTime(elapsedSeconds)}
 							</span>
 						)}
 					</div>
 				</div>
 			</div>
 
-			{/* Metrics Overview Grid */}
-			<h3>📊 30-Day Period Attendance Summary</h3>
-			<div style={styles.grid}>
-				<div style={{ ...styles.metricBox, backgroundColor: '#ecfdf5' }}>
-					<span style={{ fontSize: '11px', color: THEME.success, fontWeight: '700' }}>REGULAR HOURS</span>
-					<h2 style={{ margin: '8px 0 0 0' }}>{summaryMetrics.regularHours.toFixed(2)}h</h2>
-				</div>
-				<div style={{ ...styles.metricBox, backgroundColor: '#eff6ff' }}>
-					<span style={{ fontSize: '11px', color: THEME.info, fontWeight: '700' }}>OVERTIME (OT)</span>
-					<h2 style={{ margin: '8px 0 0 0', color: THEME.info }}>{summaryMetrics.overtimeHours.toFixed(2)}h</h2>
-				</div>
-				<div style={{ ...styles.metricBox, backgroundColor: '#faf5ff' }}>
-					<span style={{ fontSize: '11px', color: '#6b21a8', fontWeight: '700' }}>NIGHT DIFF (ND)</span>
-					<h2 style={{ margin: '8px 0 0 0', color: '#6b21a8' }}>{summaryMetrics.nightDiffHours.toFixed(2)}h</h2>
-				</div>
-				<div style={{ ...styles.metricBox, backgroundColor: '#fff5f5' }}>
-					<span style={{ fontSize: '11px', color: '#c53030', fontWeight: '700' }}>LATE MINUTES</span>
-					<h2 style={{ margin: '8px 0 0 0', color: '#c53030' }}>{summaryMetrics.latenessMinutes}m</h2>
-				</div>
-				<div style={{ ...styles.metricBox, backgroundColor: '#fffaf0' }}>
-					<span style={{ fontSize: '11px', color: '#dd6b20', fontWeight: '700' }}>UNDERTIME</span>
-					<h2 style={{ margin: '8px 0 0 0', color: '#dd6b20' }}>{summaryMetrics.undertimeMinutes}m</h2>
+			{/* ─── METRICS GRID ─── */}
+			<div style={{ marginBottom: '8px' }}>
+				<p style={{ ...s.sectionLabel, marginBottom: '14px' }}>
+					<RiBarChartBoxLine
+						size={12}
+						style={{ verticalAlign: 'middle', marginRight: '5px' }}
+					/>
+					30-Day Period Summary
+				</p>
+				<div
+					style={{
+						display: 'grid',
+						gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+						gap: '12px',
+						marginBottom: '24px',
+					}}
+				>
+					{metrics.map((m) => (
+						<div
+							key={m.label}
+							style={{
+								backgroundColor: m.bg,
+								borderRadius: '10px',
+								padding: '16px',
+								border: '1px solid #f1f5f9',
+								display: 'flex',
+								flexDirection: 'column',
+								gap: '6px',
+							}}
+						>
+							<div style={{ color: m.color, display: 'flex', alignItems: 'center', gap: '6px' }}>
+								{m.icon}
+								<span style={{ fontSize: '11px', fontWeight: '700', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+									{m.label}
+								</span>
+							</div>
+							<span style={{ fontSize: '22px', fontWeight: '800', color: m.color, letterSpacing: '-0.5px' }}>
+								{m.value}
+							</span>
+						</div>
+					))}
 				</div>
 			</div>
 
-			{/* Shift History Table Panel */}
-			<div style={{ ...styles.card, marginTop: '32px' }}>
-				<h3>📜 Historical Daily Summaries</h3>
-				<div style={styles.tableContainer}>
+			{/* ─── HISTORY TABLE ─── */}
+			<div style={s.card}>
+				<div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+					<RiHistoryLine size={17} color={THEME.textMuted} />
+					<h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700' }}>Daily Attendance History</h3>
+				</div>
+				<div style={{ overflowX: 'auto' }}>
 					{fetching ? (
-						<p style={{ color: THEME.textMuted, textAlign: 'center', padding: '24px 0' }}>Syncing workspace data records...</p>
+						<p style={{ color: THEME.textMuted, textAlign: 'center', padding: '32px 0', fontSize: '14px' }}>
+							Syncing records…
+						</p>
 					) : historyLogs.length === 0 ? (
-						<p style={{ color: THEME.textMuted, textAlign: 'center', padding: '24px 0' }}>No historical entries found for this tracking cycle.</p>
+						<p style={{ color: THEME.textMuted, textAlign: 'center', padding: '32px 0', fontSize: '14px' }}>
+							No attendance records found for this period.
+						</p>
 					) : (
-						<table style={styles.table}>
+						<table style={{ width: '100%', borderCollapse: 'collapse' }}>
 							<thead>
 								<tr>
-									<th style={styles.th}>Date Logged</th>
-									<th style={styles.th}>Regular</th>
-									<th style={styles.th}>Overtime</th>
-									<th style={styles.th}>Night Diff</th>
-									<th style={styles.th}>Lateness</th>
-									<th style={styles.th}>Undertime</th>
+									{['Date', 'Regular', 'Overtime', 'Night Diff', 'Late', 'Undertime'].map((col) => (
+										<th key={col} style={s.th}>{col}</th>
+									))}
 								</tr>
 							</thead>
 							<tbody>
 								{historyLogs.map((log) => (
-									<tr key={log.id}>
-										<td style={styles.td}><strong>{log.date}</strong></td>
-										<td style={styles.td}>{log.regularHours?.toFixed(2) || '0.00'}h</td>
-										<td style={{ ...styles.td, color: log.overtimeHours > 0 ? THEME.info : THEME.text }}>
+									<tr key={log.id} style={{ transition: 'background 0.1s' }}>
+										<td style={{ ...s.td, fontWeight: '600' }}>{log.date}</td>
+										<td style={s.td}>{log.regularHours?.toFixed(2) || '0.00'}h</td>
+										<td style={{ ...s.td, color: log.overtimeHours > 0 ? THEME.info : THEME.textMuted }}>
 											{log.overtimeHours?.toFixed(2) || '0.00'}h
 										</td>
-										<td style={{ ...styles.td, color: log.nightDiffHours > 0 ? '#6b21a8' : THEME.text }}>
+										<td style={{ ...s.td, color: log.nightDiffHours > 0 ? '#7c3aed' : THEME.textMuted }}>
 											{log.nightDiffHours?.toFixed(2) || '0.00'}h
 										</td>
-										<td style={{ ...styles.td, color: log.latenessMinutes > 0 ? '#c53030' : THEME.text }}>
+										<td style={{ ...s.td, color: log.latenessMinutes > 0 ? '#c53030' : THEME.textMuted }}>
 											{log.latenessMinutes || 0}m
 										</td>
-										<td style={{ ...styles.td, color: log.undertimeMinutes > 0 ? '#dd6b20' : THEME.text }}>
+										<td style={{ ...s.td, color: log.undertimeMinutes > 0 ? '#dd6b20' : THEME.textMuted }}>
 											{log.undertimeMinutes || 0}m
 										</td>
 									</tr>
