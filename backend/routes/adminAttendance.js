@@ -1,7 +1,7 @@
 import { db } from '../server.js';
 import express from 'express';
 import { requireAdmin } from '../middleware/auth.js';
-
+import { calculateShiftMetrics } from '../utils/attendanceMathHandler.js';
 const router = express.Router();
 
 // Universal Security Guard - applies to all endpoints defined below in this file
@@ -78,18 +78,96 @@ router.put('/punch/:id', async (req, res) => {
 			return res.status(404).json({ error: 'Punch log record not found.' });
 		}
 
-		await punchRef.update({
-			...updatedFields,
-			lastEditedBy: req.user?.uid || 'admin',
-			editedAt: new Date().toISOString()
+		const existingData = punchDoc.data();
+
+		// Check if admin is editing timestamps (requires recalc)
+		// or just overriding metrics directly (no recalc needed)
+		const isTimestampEdit = updatedFields.punchIn || updatedFields.punchOut;
+
+		let finalMetrics;
+
+		if (isTimestampEdit) {
+			// Recalculate from new timestamps
+			const mergedPunch = { ...existingData, ...updatedFields };
+			const userDoc = await db.collection('users').doc(mergedPunch.userId).get();
+			if (!userDoc.exists) {
+				return res.status(404).json({ error: 'Associated user profile not found.' });
+			}
+			const { schedule, timezone = 'Asia/Manila' } = userDoc.data();
+			finalMetrics = calculateShiftMetrics({
+				checkInStr: mergedPunch.punchIn,
+				checkOutStr: mergedPunch.punchOut,
+				schedule,
+				timezone,
+			});
+		} else {
+			// ✅ Admin is directly overriding metric values — use them as-is
+			finalMetrics = {
+				regularHours: updatedFields.regularHours ?? existingData.metrics?.regularHours ?? 0,
+				overtimeHours: updatedFields.overtimeHours ?? existingData.metrics?.overtimeHours ?? 0,
+				nightDiffHours: updatedFields.nightDiffHours ?? existingData.metrics?.nightDiffHours ?? 0,
+				latenessMinutes: updatedFields.latenessMinutes ?? existingData.metrics?.latenessMinutes ?? 0,
+				undertimeMinutes: updatedFields.undertimeMinutes ?? existingData.metrics?.undertimeMinutes ?? 0,
+				totalClockedHours: existingData.metrics?.totalClockedHours ?? 0,
+			};
+		}
+
+		// Re-aggregate the daily summary from all completed punches for that day
+		const { userId, date } = existingData;
+		const summaryDocId = `${userId}_${date}`;
+		const summaryRef = db.collection('dailySummary').doc(summaryDocId);
+
+		const dayPunchesSnap = await db.collection('attendance')
+			.where('userId', '==', userId)
+			.where('date', '==', date)
+			.where('status', '==', 'COMPLETED')
+			.get();
+
+		let aggregated = {
+			regularHours: 0,
+			overtimeHours: 0,
+			nightDiffHours: 0,
+			latenessMinutes: 0,
+			undertimeMinutes: 0,
+		};
+
+		dayPunchesSnap.forEach((doc) => {
+			// Use freshly computed metrics for the edited doc, stored metrics for others
+			const m = doc.id === id ? finalMetrics : (doc.data().metrics || {});
+			aggregated.regularHours += m.regularHours || 0;
+			aggregated.overtimeHours += m.overtimeHours || 0;
+			aggregated.nightDiffHours += m.nightDiffHours || 0;
+			aggregated.latenessMinutes += m.latenessMinutes || 0;
+			aggregated.undertimeMinutes += m.undertimeMinutes || 0;
 		});
 
-		return res.json({ success: true, message: `Punch record ${id} modified successfully.` });
+		aggregated.regularHours = parseFloat(aggregated.regularHours.toFixed(2));
+		aggregated.overtimeHours = parseFloat(aggregated.overtimeHours.toFixed(2));
+		aggregated.nightDiffHours = parseFloat(aggregated.nightDiffHours.toFixed(2));
+
+		// Writes only inside the transaction
+		await db.runTransaction(async (transaction) => {
+			transaction.update(punchRef, {
+				metrics: finalMetrics,
+				lastEditedBy: req.user?.uid || 'admin',
+				editedAt: new Date().toISOString(),
+			});
+
+			transaction.set(summaryRef, {
+				userId,
+				date,
+				...aggregated,
+				updatedAt: new Date().toISOString(),
+			}, { merge: false });
+		});
+
+		return res.json({ success: true, message: `Punch ${id} updated and summary synced.` });
+
 	} catch (error) {
+		console.error('Admin punch edit error:', error);
 		return res.status(500).json({ error: 'Failed to update punch log.', details: error.message });
 	}
 });
-
 /**
  * GET /api/admin/attendance/daily-report
  * VIEW DAILY METRICS REPORTS Across All Employees
