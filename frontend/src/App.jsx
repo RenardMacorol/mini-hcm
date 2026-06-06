@@ -3,6 +3,7 @@ import LandingPage from './views/LandingPage';
 import AuthPage from './views/AuthPage';
 import AdminDashboard from './views/AdminDashboard';
 import EmployeeDashboard from './views/EmployeeDashboard';
+import AccountSetupPage from './views/AccountSetupPage';
 import { useAuth } from './context/AuthContext.jsx';
 
 const containerStyle = {
@@ -36,7 +37,6 @@ export const App = () => {
 				<LandingPage setView={setCurrentView} user={user} onLogout={handleLogout} />
 			)}
 
-			{/* 'login' and 'register' both render AuthPage, just with a different starting tab */}
 			{(currentView === 'login' || currentView === 'register') && (
 				<AuthPage setView={setCurrentView} initialTab={currentView === 'register' ? 'register' : 'login'} />
 			)}
@@ -45,6 +45,11 @@ export const App = () => {
 				user.role === 'admin'
 					? <AdminDashboard onLogout={handleLogout} setView={setCurrentView} />
 					: <EmployeeDashboard onLogout={handleLogout} setView={setCurrentView} />
+			)}
+
+			{/* Admin-only: create employee accounts */}
+			{currentView === 'register-employee' && user?.role === 'admin' && (
+				<AccountSetupPage setView={setCurrentView} />
 			)}
 		</div>
 	);

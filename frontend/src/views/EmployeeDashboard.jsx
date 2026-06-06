@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
+
 import BACKEND_URL from '../backendConfig';
+
 import { THEME, commonStyles } from '../components/CommonStyles';
+
 import { useAuth } from '../context/AuthContext';
+
 import {
 	RiTimeLine,
 	RiLogoutBoxLine,
@@ -27,11 +31,9 @@ const EmployeeDashboard = ({ onLogout, setView }) => {
 	const [fetching, setFetching] = useState(true);
 	const [errorMessage, setErrorMessage] = useState('');
 	const [historyLogs, setHistoryLogs] = useState([]);
-
 	const [currentTime, setCurrentTime] = useState(new Date());
 	const [punchInTime, setPunchInTime] = useState(null);
 	const [elapsedSeconds, setElapsedSeconds] = useState(0);
-
 	const [summaryMetrics, setSummaryMetrics] = useState({
 		regularHours: 0,
 		overtimeHours: 0,
@@ -71,6 +73,7 @@ const EmployeeDashboard = ({ onLogout, setView }) => {
 		try {
 			setFetching(true);
 			setErrorMessage('');
+
 			const response = await fetch(API('/api/attendance/my-summary'), {
 				method: 'GET',
 				headers: {
@@ -78,25 +81,35 @@ const EmployeeDashboard = ({ onLogout, setView }) => {
 					Authorization: `Bearer ${user.token}`,
 				},
 			});
+
 			const contentType = response.headers.get('content-type');
 			if (!contentType || !contentType.includes('application/json')) {
 				throw new Error(`Server returned non-JSON response (Status: ${response.status})`);
 			}
+
 			const resData = await response.json();
 			if (!response.ok) throw new Error(resData.error || 'Failed to sync metrics from server.');
+
 			if (resData.status === 'success' && resData.data) {
-				const logs = resData.data;
+				// FIX: Filter out any null/undefined entries before processing
+				const logs = (resData.data || []).filter(Boolean);
 				setHistoryLogs(logs);
+
+				// FIX: Guard against null entries in reduce
 				const totals = logs.reduce(
-					(acc, doc) => ({
-						regularHours: acc.regularHours + (doc.regularHours || 0),
-						overtimeHours: acc.overtimeHours + (doc.overtimeHours || 0),
-						nightDiffHours: acc.nightDiffHours + (doc.nightDiffHours || 0),
-						latenessMinutes: acc.latenessMinutes + (doc.latenessMinutes || 0),
-						undertimeMinutes: acc.undertimeMinutes + (doc.undertimeMinutes || 0),
-					}),
+					(acc, doc) => {
+						if (!doc) return acc; // extra safety guard
+						return {
+							regularHours: acc.regularHours + (doc.regularHours || 0),
+							overtimeHours: acc.overtimeHours + (doc.overtimeHours || 0),
+							nightDiffHours: acc.nightDiffHours + (doc.nightDiffHours || 0),
+							latenessMinutes: acc.latenessMinutes + (doc.latenessMinutes || 0),
+							undertimeMinutes: acc.undertimeMinutes + (doc.undertimeMinutes || 0),
+						};
+					},
 					{ regularHours: 0, overtimeHours: 0, nightDiffHours: 0, latenessMinutes: 0, undertimeMinutes: 0 }
 				);
+
 				setSummaryMetrics(totals);
 			}
 		} catch (err) {
@@ -123,14 +136,17 @@ const EmployeeDashboard = ({ onLogout, setView }) => {
 				},
 				body: JSON.stringify({ type: nextType }),
 			});
+
 			const data = await response.json();
 			if (!response.ok) throw new Error(data.error || 'An error occurred processing the time stamp.');
+
 			setPunchStatus(nextType);
 			if (nextType === 'IN') {
 				setPunchInTime(new Date());
 			} else {
 				setPunchInTime(null);
 			}
+
 			await fetchSummaryHistory();
 		} catch (err) {
 			setErrorMessage(err.message);
@@ -284,6 +300,7 @@ const EmployeeDashboard = ({ onLogout, setView }) => {
 							</p>
 						</div>
 					</div>
+
 					<button
 						onClick={onLogout}
 						style={{
@@ -349,7 +366,7 @@ const EmployeeDashboard = ({ onLogout, setView }) => {
 						}}
 					>
 						<RiGpsLine size={18} />
-						{loading ? 'Processing…' : punchStatus === 'OUT' ? 'Clock In' : 'Clock Out'}
+						{loading ? 'Processing...' : punchStatus === 'OUT' ? 'Clock In' : 'Clock Out'}
 					</button>
 
 					{/* Live time row */}
@@ -439,7 +456,7 @@ const EmployeeDashboard = ({ onLogout, setView }) => {
 				<div style={{ overflowX: 'auto' }}>
 					{fetching ? (
 						<p style={{ color: THEME.textMuted, textAlign: 'center', padding: '32px 0', fontSize: '14px' }}>
-							Syncing records…
+							Syncing records...
 						</p>
 					) : historyLogs.length === 0 ? (
 						<p style={{ color: THEME.textMuted, textAlign: 'center', padding: '32px 0', fontSize: '14px' }}>
@@ -455,21 +472,22 @@ const EmployeeDashboard = ({ onLogout, setView }) => {
 								</tr>
 							</thead>
 							<tbody>
-								{historyLogs.map((log) => (
+								{/* FIX: Filter out null entries before mapping */}
+								{historyLogs.filter(Boolean).map((log) => (
 									<tr key={log.id} style={{ transition: 'background 0.1s' }}>
 										<td style={{ ...s.td, fontWeight: '600' }}>{log.date}</td>
-										<td style={s.td}>{log.regularHours?.toFixed(2) || '0.00'}h</td>
+										<td style={s.td}>{log.regularHours?.toFixed(2) ?? '0.00'}h</td>
 										<td style={{ ...s.td, color: log.overtimeHours > 0 ? THEME.info : THEME.textMuted }}>
-											{log.overtimeHours?.toFixed(2) || '0.00'}h
+											{log.overtimeHours?.toFixed(2) ?? '0.00'}h
 										</td>
 										<td style={{ ...s.td, color: log.nightDiffHours > 0 ? '#7c3aed' : THEME.textMuted }}>
-											{log.nightDiffHours?.toFixed(2) || '0.00'}h
+											{log.nightDiffHours?.toFixed(2) ?? '0.00'}h
 										</td>
 										<td style={{ ...s.td, color: log.latenessMinutes > 0 ? '#c53030' : THEME.textMuted }}>
-											{log.latenessMinutes || 0}m
+											{log.latenessMinutes ?? 0}m
 										</td>
 										<td style={{ ...s.td, color: log.undertimeMinutes > 0 ? '#dd6b20' : THEME.textMuted }}>
-											{log.undertimeMinutes || 0}m
+											{log.undertimeMinutes ?? 0}m
 										</td>
 									</tr>
 								))}

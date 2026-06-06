@@ -14,7 +14,10 @@ import {
 	RiArrowRightLine,
 	RiArrowLeftLine,
 	RiShieldCheckLine,
+	RiEyeLine,
+	RiEyeOffLine,
 } from 'react-icons/ri';
+
 
 const AuthPage = ({ setView, initialTab = 'login' }) => {
 	const { setUser } = useAuth();
@@ -25,11 +28,15 @@ const AuthPage = ({ setView, initialTab = 'login' }) => {
 	// Login state
 	const [loginForm, setLoginForm] = useState({ email: '', password: '' });
 	const [loginStatus, setLoginStatus] = useState({ loading: false, error: null });
+	const [showLoginPassword, setShowLoginPassword] = useState(false);
+	const [showRegPassword, setShowRegPassword] = useState(false);
+	const [showRegConfirmPassword, setShowRegConfirmPassword] = useState(false);
 
 	// Register state
 	const [regForm, setRegForm] = useState({
 		name: '', email: '', password: '',
-		role: 'employee', timezone: 'Asia/Manila',
+		confirmPassword: '',
+		timezone: 'Asia/Manila',
 		start: '09:00', end: '18:00',
 	});
 	const [regStatus, setRegStatus] = useState({ loading: false, error: null, success: null });
@@ -57,6 +64,15 @@ const AuthPage = ({ setView, initialTab = 'login' }) => {
 
 	const handleRegister = async (e) => {
 		e.preventDefault();
+		if (regForm.password !== regForm.confirmPassword) {
+			setRegStatus({
+				loading: false,
+				error: 'Passwords do not match.',
+				success: null,
+			});
+			return;
+		}
+
 		setRegStatus({ loading: true, error: null, success: null });
 		try {
 			const userCred = await createUserWithEmailAndPassword(auth, regForm.email, regForm.password);
@@ -66,7 +82,7 @@ const AuthPage = ({ setView, initialTab = 'login' }) => {
 				uid: user.uid,
 				name: regForm.name,
 				email: regForm.email,
-				role: regForm.role,
+				role: 'employee',
 				timezone: regForm.timezone,
 				schedule: { start: regForm.start, end: regForm.end },
 				createdAt: new Date().toISOString(),
@@ -321,16 +337,37 @@ const AuthPage = ({ setView, initialTab = 'login' }) => {
 
 								<label style={s.label}>Password</label>
 								<div style={s.inputWrap}>
-									<span style={s.inputIcon}><RiLockLine size={15} /></span>
+									<span style={s.inputIcon}>
+										<RiLockLine size={15} />
+									</span>
+
 									<input
-										type="password"
+										type={showLoginPassword ? 'text' : 'password'}
 										placeholder="••••••••"
 										value={loginForm.password}
-										onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+										onChange={(e) =>
+											setLoginForm({ ...loginForm, password: e.target.value })
+										}
 										style={s.input}
 										required
 									/>
+
+									<span
+										onClick={() => setShowLoginPassword(!showLoginPassword)}
+										style={{
+											position: 'absolute',
+											right: '12px',
+											top: '50%',
+											transform: 'translateY(-50%)',
+											cursor: 'pointer',
+											color: '#94a3b8',
+											display: 'flex',
+										}}
+									>
+										{showLoginPassword ? <RiEyeOffLine size={18} /> : <RiEyeLine size={18} />}
+									</span>
 								</div>
+
 
 								<button type="submit" disabled={loginStatus.loading} style={{ ...s.btn, opacity: loginStatus.loading ? 0.7 : 1 }}>
 									{loginStatus.loading ? 'Signing in…' : (<>Sign In <RiArrowRightLine size={15} /></>)}
@@ -394,36 +431,85 @@ const AuthPage = ({ setView, initialTab = 'login' }) => {
 
 								<label style={s.label}>Password</label>
 								<div style={s.inputWrap}>
-									<span style={s.inputIcon}><RiLockLine size={15} /></span>
+									<span style={s.inputIcon}>
+										<RiLockLine size={15} />
+									</span>
+
 									<input
-										name="password" type="password" placeholder="••••••••"
+										type={showRegPassword ? 'text' : 'password'}
+										placeholder="••••••••"
 										value={regForm.password}
-										onChange={(e) => setRegForm({ ...regForm, password: e.target.value })}
-										style={s.input} required
+										onChange={(e) =>
+											setRegForm({ ...regForm, password: e.target.value })
+										}
+										style={s.input}
+										required
 									/>
+
+									<span
+										onClick={() => setShowRegPassword(!showRegPassword)}
+										style={{
+											position: 'absolute',
+											right: '12px',
+											top: '50%',
+											transform: 'translateY(-50%)',
+											cursor: 'pointer',
+											color: '#94a3b8',
+											display: 'flex',
+										}}
+									>
+										{showRegPassword ? <RiEyeOffLine size={18} /> : <RiEyeLine size={18} />}
+									</span>
 								</div>
 
-								<div style={s.row}>
-									<div style={{ flex: 1 }}>
-										<label style={s.label}>Role</label>
-										<select
-											name="role" value={regForm.role}
-											onChange={(e) => setRegForm({ ...regForm, role: e.target.value })}
-											style={{ ...s.inputPlain, marginBottom: '14px' }}
-										>
-											<option value="employee">Employee</option>
-											<option value="admin">Admin</option>
-										</select>
-									</div>
-									<div style={{ flex: 1 }}>
-										<label style={s.label}>Timezone</label>
-										<input
-											name="timezone" value={regForm.timezone}
-											onChange={(e) => setRegForm({ ...regForm, timezone: e.target.value })}
-											style={{ ...s.inputPlain, marginBottom: '14px' }}
-										/>
-									</div>
+								<label style={s.label}>Confirm Password</label>
+								<div style={s.inputWrap}>
+									<span style={s.inputIcon}>
+										<RiLockLine size={15} />
+									</span>
+
+									<input
+										type={showRegConfirmPassword ? 'text' : 'password'}
+										placeholder="••••••••"
+										value={regForm.confirmPassword}
+										onChange={(e) =>
+											setRegForm({
+												...regForm,
+												confirmPassword: e.target.value,
+											})
+										}
+										style={s.input}
+										required
+									/>
+
+									<span
+										onClick={() =>
+											setShowRegConfirmPassword(!showRegConfirmPassword)
+										}
+										style={{
+											position: 'absolute',
+											right: '12px',
+											top: '50%',
+											transform: 'translateY(-50%)',
+											cursor: 'pointer',
+											color: '#94a3b8',
+											display: 'flex',
+										}}
+									>
+										{showRegConfirmPassword ? (
+											<RiEyeOffLine size={18} />
+										) : (
+											<RiEyeLine size={18} />
+										)}
+									</span>
 								</div>
+
+								<label style={s.label}>Timezone</label>
+								<input
+									name="timezone" value={regForm.timezone}
+									onChange={(e) => setRegForm({ ...regForm, timezone: e.target.value })}
+									style={{ ...s.inputPlain, marginBottom: '14px' }}
+								/>
 
 								<div style={{ ...s.row }}>
 									<div style={{ flex: 1 }}>

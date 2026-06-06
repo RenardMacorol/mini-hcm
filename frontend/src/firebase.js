@@ -18,8 +18,6 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-console.log("API KEY =", import.meta.env.VITE_FIREBASE_API_KEY);
-console.log("PROJECT =", import.meta.env.VITE_FIREBASE_PROJECT_ID);
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);

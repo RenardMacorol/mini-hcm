@@ -34,6 +34,23 @@ router.get('/global-summary', async (req, res) => {
 });
 
 /**
+ * GET /api/admin/users
+ * Returns all employee profiles for name resolution
+ */
+router.get('/users', async (req, res) => {
+	try {
+		const snapshot = await db.collection('users').get();
+		const users = [];
+		snapshot.forEach(doc => {
+			const { name, email, role } = doc.data();
+			users.push({ uid: doc.id, name, email, role });
+		});
+		return res.json({ success: true, data: users });
+	} catch (error) {
+		return res.status(500).json({ error: 'Failed to fetch users.' });
+	}
+});
+/**
  * GET /api/admin/attendance/punches
  * VIEW ALL PUNCHES (Filter optional by user or calendar date)
  */
