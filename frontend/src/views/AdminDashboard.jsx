@@ -7,7 +7,7 @@ import {
 	XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 import {
-	RiShieldCheckLine, RiLogoutBoxLine, RiUserAddLine,
+	RiShieldCheckLine, RiLogoutBoxLine,
 	RiCalendarLine, RiClipboardLine,
 	RiBarChartBoxLine, RiEditLine, RiSaveLine, RiCloseLine,
 	RiAlertLine, RiUserLine, RiCheckboxCircleLine,
@@ -134,7 +134,7 @@ const EditPunchModal = ({ log, onSave, onClose, saving }) => {
 /* ─────────────────────────────────────────────
    MAIN ADMIN DASHBOARD
 ───────────────────────────────────────────── */
-const AdminDashboard = ({ onLogout, setView }) => {
+const AdminDashboard = ({ onLogout }) => {
 	const API = (path) => `${BACKEND_URL}${path}`;
 	const { user } = useAuth();
 
@@ -331,14 +331,6 @@ const AdminDashboard = ({ onLogout, setView }) => {
 			border: '1px solid #e2e8f0', marginBottom: '20px',
 			boxShadow: '0 1px 4px rgba(15,23,42,0.04)',
 		},
-		widgetGrid: {
-			display: 'grid', gridTemplateColumns: '1fr',
-			gap: '16px', marginBottom: '20px',
-		},
-		widget: {
-			backgroundColor: '#fff', padding: '22px 24px', borderRadius: '14px',
-			border: '1px solid #e2e8f0', boxShadow: '0 1px 4px rgba(15,23,42,0.04)',
-		},
 		tabBar: {
 			display: 'flex', justifyContent: 'space-between', alignItems: 'center',
 			backgroundColor: '#fff', padding: '0 20px', borderRadius: '14px 14px 0 0',
@@ -448,24 +440,6 @@ const AdminDashboard = ({ onLogout, setView }) => {
 				<button onClick={onLogout} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', backgroundColor: 'transparent', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '8px', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>
 					<RiLogoutBoxLine size={14} />Logout
 				</button>
-			</div>
-
-			{/* ACCOUNT WIDGET (single, no system connectivity) */}
-			<div style={s.widget}>
-				<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-					<div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-						<div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', color: THEME.success ?? '#22c55e' }}>
-							<RiUserLine size={17} />
-						</div>
-						<div>
-							<h4 style={{ margin: 0, fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>Account Management</h4>
-							<p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>Provision employee profiles and assign shift schedules</p>
-						</div>
-					</div>
-					<button onClick={() => setView('register-employee')} style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '9px 18px', backgroundColor: THEME.primary ?? '#3b82f6', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '700', fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-						<RiUserAddLine size={14} />Create Employee Profile
-					</button>
-				</div>
 			</div>
 
 			{/* TAB BAR */}
